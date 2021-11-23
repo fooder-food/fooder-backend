@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
     imports: [
@@ -17,7 +18,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
                     synchronize: process.env.NODE_ENV === 'production' ? false: true,
                 }
             }
-        })
+        }),
+        UsersModule,
     ],
 })
 export class DbModule {
