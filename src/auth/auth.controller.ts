@@ -30,6 +30,7 @@ export class AuthController {
             throw new HttpException({
                 HttpStatus:HttpStatus.FORBIDDEN,
                 error: errorMsg,
+                mesg: error,
             },HttpStatus.FORBIDDEN);
         }
     }
