@@ -15,15 +15,12 @@ import { UsersModule } from 'src/users/users.module';
                     password: process.env.DB_PASSWORD,
                     autoLoadEntities: true,
                     //false for production
-                    synchronize: process.env.NODE_ENV === 'production' ? false: true,
+                    synchronize: false,
                     logging: false,
-                    entities:['dist/**/*.entity.js'],
-                    migrations: ['src/database/migration/**/*.ts'],
-                    subscribers: ['src/subscriber/**/*.ts'],
+                    entities:['dist/src/**/*.entity.js'],
+                    migrations: ['dist/src/database/migration/*.js'],
                     cli: {
-                        entitiesDir: 'src/**/entities',
-                        migrationsDir: 'src/database/migration',
-                        subscribersDir: 'src/subscriber',
+                        migrationsDir: 'src/database/migration',                      
                     }
                 }
             }
