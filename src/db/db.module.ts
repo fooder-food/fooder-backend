@@ -16,6 +16,15 @@ import { UsersModule } from 'src/users/users.module';
                     autoLoadEntities: true,
                     //false for production
                     synchronize: process.env.NODE_ENV === 'production' ? false: true,
+                    logging: false,
+                    entities:['dist/**/*.entity.js'],
+                    migrations: ['src/database/migration/**/*.ts'],
+                    subscribers: ['src/subscriber/**/*.ts'],
+                    cli: {
+                        entitiesDir: 'src/**/entities',
+                        migrationsDir: 'src/database/migration',
+                        subscribersDir: 'src/subscriber',
+                    }
                 }
             }
         }),
