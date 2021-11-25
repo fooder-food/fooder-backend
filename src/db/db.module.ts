@@ -15,7 +15,8 @@ import { UsersModule } from 'src/users/users.module';
                     password: process.env.DB_PASSWORD,
                     autoLoadEntities: true,
                     //false for production
-                    synchronize: false,
+                    synchronize: true,
+                    migrationsRun: true,
                     logging: false,
                     entities:['dist/src/**/*.entity.js'],
                     migrations: ['dist/src/database/migration/*.js'],
