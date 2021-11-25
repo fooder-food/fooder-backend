@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from 'src/auth/auth.module';
 import { DbModule } from 'src/db/db.module';
-import { UploadsModule } from 'src/uploads/uploads.module';
 import { SharedController } from './shared.controller';
 import { SharedService } from './shared.service';
 
@@ -11,11 +9,11 @@ import { SharedService } from './shared.service';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+  
     DbModule,
-    UploadsModule,
-    AuthModule,
   ],
   controllers: [SharedController],
-  providers: [SharedService]
+  providers: [SharedService],
+  exports: [SharedService],
 })
 export class SharedModule {}

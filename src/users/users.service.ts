@@ -23,9 +23,10 @@ export class UsersService {
         return user;
     }
 
-    async findOneByEmail(email: string, withPass: boolean) {
+    async findOneByEmail(email: string, withPass: boolean = false) {
         const selectColumn: (keyof User)[] = ['email', 'firstName', 'lastName', 'username', 'uniqueId'];
         if(withPass) selectColumn.push('password');
+        
         return this.userRepository.findOne({
             where: {
                 email,
