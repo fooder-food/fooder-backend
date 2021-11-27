@@ -30,7 +30,7 @@ export class User extends BaseEntity {
   createDate: string
 
   @UpdateDateColumn()
-  uodateDate: string
+  updateDate: string
 
 //   @BeforeInsert()
 //   private hashPassword() {

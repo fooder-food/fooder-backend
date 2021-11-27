@@ -20,6 +20,8 @@ export class UsersService {
         });
         const user = await this.userRepository.save(userModel);
         delete user.password;
+        delete user.id;
+        delete user.isActive;
         return user;
     }
 
