@@ -3,8 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './users.entity';
 import { v4 as uuidv4 } from 'uuid';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto, CreateUseType } from './dto/create-user.dto';
 import { hashSync } from 'bcryptjs';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserWithAvatarDto } from './dto/update-user-with-avatar.dto';
 
 @Injectable()
 export class UsersService {
@@ -15,7 +17,9 @@ export class UsersService {
    async create(createUserDto: CreateUserDto): Promise<User> {
         const userModel = this.userRepository.create({
             ...createUserDto, 
+            phoneNumber: '',
             uniqueId: uuidv4(),
+            avatar: '',
             password: hashSync(createUserDto.password),
         });
         const user = await this.userRepository.save(userModel);
@@ -26,7 +30,7 @@ export class UsersService {
     }
 
     async findOneByEmail(email: string, withPass: boolean = false) {
-        const selectColumn: (keyof User)[] = ['email', 'firstName', 'lastName', 'username', 'uniqueId'];
+        const selectColumn: (keyof User)[] = ['email','username', 'uniqueId', 'userType', 'id', 'createDate', 'updateDate', 'avatar', 'avatarType', 'deviceToken'];
         if(withPass) selectColumn.push('password');
         
         return this.userRepository.findOne({
@@ -34,6 +38,97 @@ export class UsersService {
                 email,
             },
             select: selectColumn,
+        });
+    }
+
+    async updateUser(updateUserDto: UpdateUserWithAvatarDto, uniqueId: string) {
+       
+       try {
+        const user = await this.userRepository.findOneOrFail({
+            where: {
+                uniqueId,
+            }
+        });
+
+        if(updateUserDto.avatar === '') {
+            delete updateUserDto.avatar;
+        }
+
+        if(updateUserDto.avatarType === '') {
+            delete updateUserDto.avatarType;
+        }
+
+        if(user.id) {
+            return await this.userRepository.save({
+                ...user,
+                ...updateUserDto,
+            });
+        }
+       } catch (error) {
+           return error;
+       }
+    }
+
+    async updateUserDeviceToken(deviceToken: string, uniqueId: string) {
+        try {
+            const user = await this.userRepository.findOneOrFail({
+                where: {
+                    uniqueId,
+                }
+            });
+    
+            if(user.id) {
+                if(deviceToken) {
+                    return await this.userRepository.save({
+                        ...user,
+                        deviceToken,
+                    });
+                }
+                return await this.userRepository.save({
+                    ...user,
+                });
+            }
+           } catch (error) {
+               return error;
+           }
+    }
+
+    async markPhoneNumberAsConfirmed(uniqueId) {
+        const selectColumn: (keyof User)[] = ['email', 'username', 'uniqueId', 'phoneNumber'];
+        await this.userRepository.update({uniqueId: uniqueId}, {
+            isPhoneConfirmed: true,
+            isActive: true,
+        });
+        const user = this.userRepository.findOne({
+            where: {
+                uniqueId,
+            },
+            select: selectColumn,
+        });
+        return user;
+    }
+
+    async findEmailIsAvaiable(email: string) {
+        const user = await this.userRepository.findOne({
+            where: {
+                email: email,
+            }
+        });
+        return user === undefined ? false : true;
+    }
+
+    async finduserByUniqueId(id: string) {
+        return this.userRepository.findOne({
+            where: {
+                uniqueId:id,
+            }
+        });
+    }
+    async finduserById(id: string) {
+        return this.userRepository.findOne({
+            where: {
+                id,
+            }
         });
     }
 

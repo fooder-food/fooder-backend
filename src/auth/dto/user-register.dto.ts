@@ -6,8 +6,14 @@ export class UserRegisterDto {
     @IsNotEmpty()
     @ApiProperty({ description: 'email address', example: 'xxx@xxx.com' , type: 'string', required: true})
     email: string;
+    
     @IsString()
     @IsNotEmpty()
     @ApiProperty({ description: 'password', example: '123456', type: 'string', required: true })
     password: string;
+
+    @IsString()
+    @ApiProperty({ description: 'username', example: 'john', type: 'string', required: true })
+    @IsNotEmpty()
+    username: string;
 }

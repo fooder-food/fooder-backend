@@ -19,7 +19,7 @@ export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> 
                         (data) =>({
                             code: res.statusCode,
                             data,
-                            message: data.message,
+                            message: data.message === null ? '' : data.message,
                         })
                     )
                 );   

@@ -24,6 +24,6 @@ const MAO = require('multer-ali-oss');
   ],
   controllers: [UploadsController],
   providers: [UploadsService],
-  exports: [UploadsService],
+  exports: [UploadsService, UploadsModule],
 })
 export class UploadsModule {}

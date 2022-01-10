@@ -8,7 +8,7 @@ const options:MysqlConnectionOptions = {
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
     //false for production
-    synchronize: process.env.NODE_ENV === 'production' ? false: true,
+    synchronize: true, //process.env.NODE_ENV === 'production' ? false: true,
     logging: false,
     entities:['dist/**/*.entity.js'],
     migrations: ['src/database/migration/**/*.ts'],

@@ -1,5 +1,5 @@
-import { UserRegisterDto } from "./user-register.dto";
-
-export class UserLoginDto extends UserRegisterDto {
-
+export class UserLoginDto {
+    email: string;
+    password: string;
+    deviceToken: string;
 }
