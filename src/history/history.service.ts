@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { SearchHistoryDto } from './dto/create-history.dto';
 import { SearchHistory } from './history.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { UpdateHistoryDto } from './dto/update-history.dto';
 
 @Injectable()
 export class HistoryService {
@@ -25,9 +26,11 @@ export class HistoryService {
     }
 
     async getAll(user:User) {   
-        return this.searchHistoryRepository.find({
+        const data = await this.searchHistoryRepository.find({
             createdBy: user,
+            isActive: true,
         });
+        return data;
     }
 
     async findByRestaurantUniqueId(id: string) {
@@ -36,5 +39,17 @@ export class HistoryService {
                 restaurantUniqueId: id,
             }
         })
+    }
+
+    async updateHistoryByRestaurantUniqueId(updateHistoryDto: UpdateHistoryDto) {
+        
+        const history = await this.searchHistoryRepository.findOne({
+            where: {
+                restaurantUniqueId: updateHistoryDto.restaurantUniqueId,
+
+            }
+        });
+        history.isActive = updateHistoryDto.isActive == 1 ? true: false
+        return this.searchHistoryRepository.update(history.id, history);
     }
 }

@@ -14,6 +14,7 @@ import { HttpModule } from '@nestjs/axios';
 import { FavoriteModule } from './favorite/favorite.module';
 import { CommentsModule } from './comments/comments.module';
 import { HistoryModule } from './history/history.module';
+import { ListModule } from './list/list.module';
 @Module({
   imports: [
     SharedModule,
@@ -29,6 +30,7 @@ import { HistoryModule } from './history/history.module';
     FavoriteModule,
     CommentsModule,
     HistoryModule,
+    ListModule,
   ],
   controllers: [AppController],
   providers: [AppService, HttpModule],

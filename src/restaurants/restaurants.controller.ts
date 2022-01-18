@@ -34,8 +34,10 @@ export class RestaurantsController {
     ) {}
     
     @UseGuards(AuthGuard('jwt'))
+    @UseInterceptors(FileInterceptor('image'))
     @Post('/create')
-    async createRestaurant(@CurrentUser() data, @Body() createRestaurantDto: CreateRestaurantDto) {
+    async createRestaurant(@UploadedFile('file') file,@CurrentUser() data, @Body() createRestaurantDto: CreateRestaurantDto) {
+        const image = file.url;
         const information = await this.restaurantsService.getInformationByPlaceId(createRestaurantDto.placeId);
         const category = await this.categoryService.getCategoryByUniqueId(createRestaurantDto.selectedCategoryUniqueId);
         const user = data.user;
@@ -69,6 +71,7 @@ export class RestaurantsController {
             address: address,
             selectedCategory: category,
             createBy: data.user,
+            image,
         };
 
        await this.restaurantsService.createRestaurant(addRestaurantDto);
@@ -152,6 +155,11 @@ export class RestaurantsController {
     async searchRestaurant(@Body() searchRestaurantDto: SearchRestaurantDto) {
         return this.restaurantsService.searchRestaurant(searchRestaurantDto);
     }
+    // @UseGuards(AuthGuard('jwt'))
+    // @Post('/search')
+    // async searchRestaurantWithToken(@Body() searchRestaurantDto: SearchRestaurantDto, @CurrentUser() data) {
+    //     return this.restaurantsService.searchRestaurantWithToken(searchRestaurantDto, data.user);
+    // }
 
 
     @UseGuards(AuthGuard('jwt'))

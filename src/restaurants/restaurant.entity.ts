@@ -1,6 +1,7 @@
 import { Category } from "src/category/category.entity";
 import { Comment } from "src/comments/comment.entity";
 import { Favorite } from "src/favorite/favorite.entity";
+import { ListItem } from "src/list/list_item.entity";
 import { User } from "src/users/users.entity";
 import { BaseEntity, Column, CreateDateColumn, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
@@ -55,6 +56,9 @@ export class Restaurant extends BaseEntity {
     @Column({default: ''})
     stateAlias: string;
 
+    @Column()
+    image: string
+
     @ManyToOne(() => Category, category => category.id)
     @JoinColumn({ name: 'category_id' })
     selectedCategory: Category;
@@ -74,6 +78,9 @@ export class Restaurant extends BaseEntity {
 
     @ManyToOne(() => User, user => user.id)
     createBy: User;
+
+    @OneToMany(() => ListItem, item => item.id)
+    listItems: ListItem[];
 
     @OneToMany(() => Favorite,  favorite => favorite.id) 
     // @JoinTable({name: 'favorite'}) 

@@ -16,5 +16,6 @@ export class AddRestaurantDto extends CreateRestaurantDto {
     user: number;
     selectedCategory: Category;
     createBy: User;
+    image: string;
 }
 

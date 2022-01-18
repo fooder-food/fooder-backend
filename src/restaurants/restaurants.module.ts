@@ -38,6 +38,7 @@ const MAO = require('multer-ali-oss');
     })
   ],
   controllers: [RestaurantsController],
-  providers: [RestaurantsService, NotificationGateway]
+  providers: [RestaurantsService, NotificationGateway],
+  exports: [RestaurantsService]
 })
 export class RestaurantsModule {}

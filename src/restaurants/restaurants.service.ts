@@ -15,6 +15,7 @@ import { GetRestaurantDto } from './dto/get-restaraurants.dto';
 import { SetRestaurantStatusDto } from './dto/set-status.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { SearchRestaurantDto } from './dto/search-restaurant.dto';
+import { User } from 'src/users/users.entity';
 
 @Injectable()
 export class RestaurantsService {
@@ -81,13 +82,13 @@ export class RestaurantsService {
         let sql = '';
         if(getRestaurantDto.state) {
             sql = `SELECT restaurant.restaurantName, restaurant.id, restaurant.uniqueId,restaurant.state, 
-            restaurant.geo, restaurant.view, COUNT(distinct comment.id) AS comments, 
+            restaurant.geo, restaurant.view,restaurant.image,COUNT(distinct comment.id) AS comments, 
             COUNT(DISTINCT favorite.userId) as follower FROM restaurant LEFT JOIN comment ON 
             restaurant.id = comment.restaurant_id LEFT JOIN favorite ON restaurant.id = favorite.restaurantId 
             ${filterQuery == "" ? "WHERE": filterQuery + "AND "} restaurant.state='${getRestaurantDto.state}' GROUP BY restaurant.id;`;
         } else {
             sql = `SELECT restaurant.restaurantName, restaurant.id, restaurant.uniqueId,restaurant.state, 
-            restaurant.geo, restaurant.view, COUNT(distinct comment.id) AS comments, 
+            restaurant.geo, restaurant.view,restaurant.image,COUNT(distinct comment.id) AS comments, 
             COUNT(DISTINCT favorite.userId) as follower FROM restaurant LEFT JOIN comment ON 
             restaurant.id = comment.restaurant_id LEFT JOIN favorite ON restaurant.id = favorite.restaurantId 
             ${filterQuery}GROUP BY restaurant.id;`;
@@ -141,7 +142,6 @@ export class RestaurantsService {
         return restaurants;
     }
 
-
     calculateRating(totalNumber: number, bad: number, normal: number, good: number) {
         if(totalNumber === 0) {
             return 5;
@@ -163,14 +163,20 @@ export class RestaurantsService {
     async getSingleRestaurantInfo(uniqueId: string) {
         const sql = `
         SELECT restaurant.restaurantName, restaurant.id, restaurant.uniqueId,restaurant.state, restaurant.view, restaurant.geo, 
-        restaurant.address, restaurant.pricePerson, restaurant.website, restaurant.businessHour, restaurant.breakTime, 
-        restaurant.restaurantPhone, restaurant.updateDate, restaurant.createById,
+        restaurant.address, restaurant.pricePerson, restaurant.website,restaurant.image, restaurant.businessHour, restaurant.breakTime, 
+        restaurant.restaurantPhone, restaurant.updateDate,restaurant.createDate, restaurant.createById,
         COUNT(distinct comment.id) AS totalComments, COUNT(DISTINCT favorite.userId) as totalFollowers FROM restaurant 
         LEFT JOIN comment ON restaurant.id = comment.restaurant_id 
         LEFT JOIN favorite ON restaurant.id = favorite.restaurantId 
         WHERE restaurant.uniqueId=? GROUP BY restaurant.id;` ;
         let totalPhotos = [];
         let restaurant = (await this.restaurantRepository.query(sql,[uniqueId]))[0];
+        totalPhotos.push({
+            imageUrl: restaurant.image,
+            updateDate: restaurant.updateDate,
+            createDate: restaurant.createDate,
+            uniqueId: uniqueId,
+        });
         const followers = await this.favoriteService.getByRestaurantId(restaurant.id);
         let comments: any = await this.commentService.getByrestaurantId(restaurant.id);
         const user = await this.userService.finduserById(restaurant.createById);
@@ -217,9 +223,57 @@ export class RestaurantsService {
     }
 
     async searchRestaurant(searchRestaurantDto: SearchRestaurantDto) {
-        return this.restaurantRepository.find({
+        let restaurants = await this.restaurantRepository.find({
             restaurantName: Like(`%${searchRestaurantDto.keyword}%`),
         });
+
+        const newRestaurants = await Promise.all(restaurants.map(async (restaurant) => {
+            const comments = await this.commentService.getByrestaurantId(restaurant.id);
+            let [good,normal, bad] = [0,0,0];
+            comments.forEach((item) => {
+                if(item.type === CommentRating.GOOD) {
+                    good++;
+                } else if (item.type === CommentRating.NORMAL) {
+                    normal++;
+                }else {
+                    bad++;
+                }
+            })
+            const rating = this.calculateRating(Number(comments.length), bad, normal, good);
+            return {
+               ...restaurant,
+               rating,
+            }
+        }));
+
+        return newRestaurants;
     }
+
+    // async searchRestaurantWithToken(searchRestaurantDto: SearchRestaurantDto, user: User) {
+    //     let restaurants = await this.restaurantRepository.find({
+    //         restaurantName: Like(`%${searchRestaurantDto.keyword}%`),
+    //     });
+
+    //     const newRestaurants = await Promise.all(restaurants.map(async (restaurant) => {
+    //         const comments = await this.commentService.getByrestaurantId(restaurant.id);
+    //         let [good,normal, bad] = [0,0,0];
+    //         comments.forEach((item) => {
+    //             if(item.type === CommentRating.GOOD) {
+    //                 good++;
+    //             } else if (item.type === CommentRating.NORMAL) {
+    //                 normal++;
+    //             }else {
+    //                 bad++;
+    //             }
+    //         })
+    //         const rating = this.calculateRating(Number(comments.length), bad, normal, good);
+    //         return {
+    //            ...restaurant,
+    //            rating,
+    //         }
+    //     }));
+
+    //     return newRestaurants;
+    // }
     
 }
