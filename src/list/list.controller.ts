@@ -8,6 +8,8 @@ import { CreateListItemDto } from './dto/create-list-item.dto';
 import { CreateListDto } from './dto/create-list.dto';
 import { DelListItemWithSearchDto } from './dto/del-list-item-with-search.dto';
 import { DeleteListItemDto } from './dto/delete-list-item.dto';
+import { DeleteListDto } from './dto/delete-list.dto';
+import { ReorderItemDto } from './dto/reorder-item.dto';
 import { SearchListItemRestaurantDto } from './dto/search-list-item-restaurant.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 import { ListService } from './list.service';
@@ -22,14 +24,31 @@ export class ListController {
     @UseGuards(AuthGuard('jwt'))
     @Get('/all')
     async getAllList(@CurrentUser() data) {
-        return this.listService.getAllListByUser(data.user);
+        const collectionList = await this.listService.getAllListByUser(data.user);
+        const newCollectionList = Promise.all(collectionList.map(async (list) => {
+            const items = await this.listService.getListItemByCollectionList(list);
+            let image = "";
+            return {
+                ...list,
+                image: items.image,
+            }
+        }));
+       return newCollectionList;
     }
 
     @UseGuards(AuthGuard('jwt'))
     @Post('/create')
     async createList(@Body() createListDto: CreateListDto, @CurrentUser() data) {
         await this.listService.createList(createListDto, data.user);
-        return this.listService.getAllListByUser(data.user);
+        const collectionList = await this.listService.getAllListByUser(data.user);
+        const newCollectionList = Promise.all(collectionList.map(async (list) => {
+            let image = "";
+            return {
+                ...list,
+                image,
+            }
+        }));
+       return newCollectionList;
     }
 
     @UseGuards(AuthGuard('jwt'))
@@ -37,9 +56,26 @@ export class ListController {
     async updateList(@Body() updateListDto: UpdateListDto, @CurrentUser() data) {
         await this.listService.updateListByUniqueId(updateListDto);
         const collectionList = await this.listService.getCollectionListByUniqueId(updateListDto.uniqueId);
-        return await this.listService.getListItemByCollectionListUniqueId(collectionList);
+        return await this.listService.getListItemByCollectionList(collectionList);
     }
 
+    @UseGuards(AuthGuard('jwt'))
+    @Delete('/delete')
+    async deleteList(@Body() deleteListDto: DeleteListDto, @CurrentUser() data) {
+        const collection = await this.listService.getCollectionListByUniqueId(deleteListDto.listUniqueId);
+        await this.listService.delListItemByListUniqueId(collection);
+        await this.listService.delListByUniqueId(collection.uniqueId);
+        const collectionList =  await this.listService.getAllListByUser(data.user);
+        const newCollectionList = Promise.all(collectionList.map(async (list) => {
+            const items = await this.listService.getListItemByCollectionList(list);
+            let image = "";
+            return {
+                ...list,
+                image: items.image,
+            }
+        }));
+       return newCollectionList;
+    }
     @UseGuards(AuthGuard('jwt'))
     @Post('/item/create')
     async createListItem(@Body() createListItemDto: CreateListItemDto, @CurrentUser() data) {
@@ -57,7 +93,7 @@ export class ListController {
 
        return {
         msg,
-        items: await this.listService.getListItemByCollectionListUniqueId(collectionList),
+        items: await this.listService.getListItemByCollectionList(collectionList),
        } 
      
     }
@@ -67,7 +103,7 @@ export class ListController {
     async getListItem(@Param('id') id: string) {
        try {
         const collectionList = await this.listService.getCollectionListByUniqueId(id);
-        return await this.listService.getListItemByCollectionListUniqueId(collectionList);
+        return await this.listService.getListItemByCollectionList(collectionList);
        } catch (error) {
            
        }
@@ -78,7 +114,7 @@ export class ListController {
        try {
          await this.listService.deleteCollectionListItem(deleteListItemDto.itemUniqueId);
          const collectionList = await this.listService.getCollectionListByUniqueId(deleteListItemDto.listUniqueId);
-        return await this.listService.getListItemByCollectionListUniqueId(collectionList);
+        return await this.listService.getListItemByCollectionList(collectionList);
        } catch (error) {
            
        }
@@ -111,7 +147,6 @@ export class ListController {
     async delItem(@Body() deleteListItemDto: DelListItemWithSearchDto, @CurrentUser() data) {
        try {
          const restaurant = await this.RestaurantService.getRestaurantWithUniqueId(deleteListItemDto.restaurantUniqueId);
-         console.log(restaurant);
          await this.listService.deleteCollectionListItemWithRestaurant(restaurant);
          const searchDto: SearchListItemRestaurantDto = {
             keyword: deleteListItemDto.keyword,
@@ -119,6 +154,22 @@ export class ListController {
         }
         const restaurants = await this.listService.searchRestaurantWithToken(searchDto, data.user);
         return restaurants;
+       } catch (error) {
+           
+       }
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Put('/reorder-item')
+    async reOrderItem(@Body() reorderItemDto: ReorderItemDto, @CurrentUser() data) {
+       try {
+           const newOrderList = reorderItemDto.newOrderList;
+           newOrderList.forEach(item => {
+               console.log(item);
+               this.listService.updateOrder(item.uniqueId, item.order);
+           });
+           const collectionList = await this.listService.getCollectionListByUniqueId(reorderItemDto.listUniqueId);
+           return await this.listService.getListItemByCollectionList(collectionList);
        } catch (error) {
            
        }

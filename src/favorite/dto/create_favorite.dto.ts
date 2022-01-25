@@ -3,5 +3,4 @@ import { User } from "src/users/users.entity";
 
 export class CreateFavoriteDto {
     restaurant: number;
-    user: number;
 }

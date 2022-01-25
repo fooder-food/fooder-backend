@@ -3,7 +3,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from 'src/auth/current-user.decorator';
 import { CategoryService } from 'src/category/category.service';
+import { CommentRating } from 'src/comments/comment.entity';
 import { CommentsService } from 'src/comments/comments.service';
+import { SetCommentLikeDto } from 'src/comments/dto/setCommentLike.dto';
 import { AddFavoriteDto } from 'src/favorite/dto/add_favorite.dto';
 import { CreateFavoriteDto } from 'src/favorite/dto/create_favorite.dto';
 import { FavoriteService } from 'src/favorite/favorite.service';
@@ -15,10 +17,13 @@ import { AddCommentDto } from './dto/add-comment.dto';
 import { AddRestaurantDto } from './dto/add-restaurnt.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import { GetCommentByTypeDto } from './dto/get-comment-by-type.dto';
 import { GetRestaurantDto } from './dto/get-restaraurants.dto';
 import { GetRestaurantFilterDto } from './dto/get-restaurants-filter.dto';
 import { SearchRestaurantDto } from './dto/search-restaurant.dto';
 import { SetRestaurantStatusDto } from './dto/set-status.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
+import { UpdateRestaurantInfoDto } from './dto/update-restaurant.dto';
 import { Restaurant } from './restaurant.entity';
 import { RestaurantsService } from './restaurants.service';
 
@@ -49,7 +54,6 @@ export class RestaurantsController {
         const stateAlias = (addressComponent[addressComponent.length - 3] as any).short_name;
         const phone = information.formatted_phone_number
         const geo = JSON.stringify(information.geometry.location);
-
         const businessHour = information.opening_hours ? JSON.stringify(information.opening_hours.weekday_text) : JSON.stringify([]);
         const website = information.website === undefined ? '' : information.website;
         createRestaurantDto.restaurantPhone = createRestaurantDto.restaurantPhone === '' ? phone : createRestaurantDto.restaurantPhone;
@@ -96,15 +100,73 @@ export class RestaurantsController {
                     filterQuery +=`OR category_id=${category.id} `;
                 }
             }
+            
         }
-        console.log(filterQuery);
+        if(!getRestaurantsDto.filter) {
+            filterQuery += 'WHERE ';
+        }
         return await this.restaurantsService.getRestaurantInfoWihOutToken(getRestaurantsDto, filterQuery);
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Get('/all-admin')
+    async getRestaurantWithToken() {
+        return this.restaurantsService.getAllRestaurant();
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Get('/info-admin/:id')
+    async getRestaurantInfoWithToken(@Param('id') id) {
+        console.log(id);
+        return this.restaurantsService.getRestaurantInfo(id);
     }
 
     @Get('/:id')
     async getSingleRestaurant(@Param('id') id) {
         return await this.restaurantsService.getSingleRestaurantInfo(id);
     }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Get('/favorite/all')
+    async getAllFollow(@CurrentUser() data) {
+       const favoriteList =  await this.favoriteService.getFavoriteByUser(data.user);
+       const newFavoriteList = Promise.all(
+        favoriteList.map(async favorite => {
+            const restaurant = {...(favorite.restaurant as unknown as Restaurant)};
+            // calculate total review
+            const comments = await this.commentService.getByrestaurantId(restaurant.id);
+            // calculate total rating
+            let [good,normal, bad] = [0,0,0];
+            comments.forEach((item) => {
+                if(item.type === CommentRating.GOOD) {
+                    good++;
+                } else if (item.type === CommentRating.NORMAL) {
+                    normal++;
+                }else {
+                    bad++;
+                }
+            })
+            const rating = this.restaurantsService.calculateRating(Number(comments.length), bad, normal, good);
+            const newRestaurnt = {
+                uniqueId: restaurant.uniqueId,
+                state: restaurant.state,
+                name: restaurant.restaurantName,
+                image: restaurant.image,
+                rating: rating,
+                view: restaurant.view,
+                review: comments.length,
+            }
+            return {
+                uniqueId: favorite.uniqueId,
+                isActive: favorite.isActive,
+                restaurant: newRestaurnt,
+            }
+        })
+       );
+       return newFavoriteList;
+    }
+
+
     @UseGuards(AuthGuard('jwt'))
     @Post('/favorite')
     async addFollow(@Body() addFavoriteDto: AddFavoriteDto) {
@@ -112,10 +174,9 @@ export class RestaurantsController {
         const restaurant = await this.restaurantsService.getRestaurantWithUniqueId(addFavoriteDto.restaurantUniqueId);
 
         const createFavoriteDto: CreateFavoriteDto = {
-            user: user.id,
             restaurant: restaurant.id,
         };
-        return await this.favoriteService.create(createFavoriteDto);
+        return await this.favoriteService.create(createFavoriteDto, user);
     }
 
     @UseGuards(AuthGuard('jwt'))
@@ -151,16 +212,51 @@ export class RestaurantsController {
       
     }
 
+    @UseInterceptors(FileFieldsInterceptor([
+        {
+            name: 'photos',
+            maxCount:30,
+        }
+    ]))
+    @UseGuards(AuthGuard('jwt'))
+    @Put('comments/update')
+    async updateComment(@UploadedFiles() files, @Body() updateCommentDto: UpdateCommentDto, @CurrentUser() data) {
+        let photos = [];
+        if(updateCommentDto.delImages) {
+            const delImageList = JSON.parse(updateCommentDto.delImages) as any[];
+            for(let index = 0; index < delImageList.length; index ++) {
+                await this.commentService.delCommentImage(delImageList[index].id);
+            }
+        }
+
+        if(files.photos) {
+            photos = [...files.photos];
+        }
+        
+        return this.commentService.update(updateCommentDto, photos);
+      
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Delete('comments/:id')
+    async deleteComment(@Param('id') id) {
+       const comment = await this.commentService.getCommentByUniqueId(id);
+       const restaurantId = await comment.restaurant.uniqueId;
+       const image = await this.commentService.getCommentImage(comment);
+
+       if(image.length > 1) {
+           await this.commentService.delCommentImageByCommentId(comment);
+       } 
+       const like = await this.commentService.delCommentlikeByComment(comment);
+       await this.commentService.delComment(comment.id);
+       return await this.restaurantsService.getSingleRestaurantInfo(restaurantId);
+    }
+
     @Post('/search')
     async searchRestaurant(@Body() searchRestaurantDto: SearchRestaurantDto) {
         return this.restaurantsService.searchRestaurant(searchRestaurantDto);
     }
-    // @UseGuards(AuthGuard('jwt'))
-    // @Post('/search')
-    // async searchRestaurantWithToken(@Body() searchRestaurantDto: SearchRestaurantDto, @CurrentUser() data) {
-    //     return this.restaurantsService.searchRestaurantWithToken(searchRestaurantDto, data.user);
-    // }
-
+    
 
     @UseGuards(AuthGuard('jwt'))
     @Put('/set_status')
@@ -168,6 +264,65 @@ export class RestaurantsController {
         const user: User = data.user;
         return await this.restaurantsService.setRestaurantStatus(setRestaurantStatusDto,user.deviceToken);
     }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Put('/update')
+    async updateRestaurantInfo(@Body() updateRestaurantInfoDto: UpdateRestaurantInfoDto, @CurrentUser() data) {
+        try {
+            const results = await this.restaurantsService.getPlaceId(updateRestaurantInfoDto.address);
+        const placeId = results[0].place_id;
+        const restaurant = await this.restaurantsService.getRestaurantInfo(updateRestaurantInfoDto.uniqueId);
+        if(restaurant.placeId !== placeId) {
+            const addressComponent = results[0].address_components as [];
+            restaurant.placeId = placeId;
+            restaurant.geo = JSON.stringify(results[0].geometry.location);
+             restaurant.country = (addressComponent[addressComponent.length - 2] as any).long_name;
+             restaurant.countryAlias = (addressComponent[addressComponent.length - 2] as any).short_name;
+             restaurant.state = (addressComponent[addressComponent.length - 3] as any).long_name;
+             restaurant.stateAlias = (addressComponent[addressComponent.length - 3] as any).short_name;
+        }
+        restaurant.id = updateRestaurantInfoDto.id;
+        restaurant.uniqueId = updateRestaurantInfoDto.uniqueId;
+        restaurant.image = updateRestaurantInfoDto.image;
+        restaurant.address = updateRestaurantInfoDto.address;
+        restaurant.restaurantName = updateRestaurantInfoDto.restaurantName;
+        restaurant.pricePerson = updateRestaurantInfoDto.pricePerson;
+        restaurant.website = updateRestaurantInfoDto.website;
+        restaurant.businessHour = updateRestaurantInfoDto.businessHour;
+        restaurant.breakTime = updateRestaurantInfoDto.breakTime;
+        restaurant.restaurantPhone = updateRestaurantInfoDto.restaurantPhone;
+        restaurant.status = updateRestaurantInfoDto.status;
+         await this.restaurantsService.updateRestaurantInfo(restaurant);
+         return {
+             message: 'Update Successful',
+         }
+        } catch(e) {
+            return {
+                message: 'Update Failed',
+            }
+        }
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Post('/comment/set-like')
+    async setLike(@CurrentUser() data, @Body() setCommentLikeDto: SetCommentLikeDto) {
+        const comment = await this.commentService.getCommentByUniqueId(setCommentLikeDto.commentUniqueId);
+        console.log(comment);
+        const isExist = await this.commentService.checkCommentLikeIsExist(data.user, comment);
+        if(isExist.length === 0) {
+             await this.commentService.addCommentLike(comment, data.user);
+        } else {
+             await this.commentService.delCommentLike(data.user, comment);
+        }
+        return this.restaurantsService.getSingleRestaurantInfo(comment.restaurant.uniqueId);
+    }
+
+    @Get('/comments/type')
+    async getCommentsByType(@Body() getCommentByTypeDto: GetCommentByTypeDto, ) {
+        const restaurant = await this.restaurantsService.getRestaurantInfo(getCommentByTypeDto.restaurantUniqueId);
+        return this.restaurantsService.getCommentByType(restaurant, getCommentByTypeDto.type);
+    }
+
 
     @Post('/notification')
     async notification() {

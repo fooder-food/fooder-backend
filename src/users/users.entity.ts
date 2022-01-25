@@ -1,5 +1,6 @@
 import { Category } from 'src/category/category.entity';
 import { Comment } from 'src/comments/comment.entity';
+import { CommentLike } from 'src/comments/commentLike.entity';
 import { CommentReply } from 'src/comments/commentReply.entity';
 import { SearchHistory } from 'src/history/history.entity';
 import { List } from 'src/list/list.entity';
@@ -31,7 +32,7 @@ export class User extends BaseEntity {
   @Column({select: false})
   password: string;
 
-  @Column({ default: false })
+  @Column({ default: true })
   isActive: boolean;
   
   @Column({
@@ -56,6 +57,10 @@ export class User extends BaseEntity {
 
   @OneToMany(()=> Category, categories => categories.id)
   categories: Category[];
+
+  @OneToMany(()=> CommentLike, like => like.id)
+  likes: CommentLike[];
+
 
   @OneToMany(()=> SearchHistory, history => history.id)
   searchHistory: SearchHistory[];

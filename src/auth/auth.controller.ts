@@ -308,6 +308,11 @@ export class AuthController {
     async login(@CurrentUser() data: any, @Body() UserLoginDto: UserLoginDto) {
         const user: User = data.user;
         console.log(UserLoginDto.deviceToken);
+        if(!user.isActive == false) {
+            return {        
+                message: 'your account is banned please contact customer service.',
+            }
+        }
         if(UserLoginDto.deviceToken && user.userType === UserType.USER) {
             this.usersService.updateUserDeviceToken(UserLoginDto.deviceToken, data.user.uniqueId);
         }

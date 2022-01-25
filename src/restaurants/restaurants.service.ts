@@ -29,6 +29,24 @@ export class RestaurantsService {
         private readonly firebaseService: FirebaseService,
     ) {}
 
+    async getAllRestaurant() {
+        return this.restaurantRepository.find();
+    }
+
+    async getRestaurantInfo(id) {
+        return this.restaurantRepository.findOne({
+            where: {
+                uniqueId: id,
+
+            },
+            relations: ['createBy', 'selectedCategory']
+        });
+    }
+    
+    async updateRestaurantInfo(restaurant:Restaurant) {
+        return this.restaurantRepository.update(restaurant.id, restaurant);
+    }
+
     async setRestaurantStatus(setRestaurantStatus: SetRestaurantStatusDto, registerId: string) {
         console.log(setRestaurantStatus);
         const status = setRestaurantStatus.status;
@@ -68,6 +86,16 @@ export class RestaurantsService {
         );
     }
 
+    async getPlaceId(address: string) {
+        console.log(address);
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.GOOGLE_API_KEY}`;
+        return await firstValueFrom(
+            await this.httpService.get(url).pipe(
+                map(res => res.data.results)
+            )
+        );
+    }
+
 
     async getRestaurantWithUniqueId(id: string) {
         return this.restaurantRepository.findOne({
@@ -80,19 +108,22 @@ export class RestaurantsService {
 
     async getRestaurantInfoWihOutToken(getRestaurantDto: GetRestaurantDto, filterQuery: string) {
         let sql = '';
+        console.log(filterQuery);
         if(getRestaurantDto.state) {
             sql = `SELECT restaurant.restaurantName, restaurant.id, restaurant.uniqueId,restaurant.state, 
             restaurant.geo, restaurant.view,restaurant.image,COUNT(distinct comment.id) AS comments, 
             COUNT(DISTINCT favorite.userId) as follower FROM restaurant LEFT JOIN comment ON 
             restaurant.id = comment.restaurant_id LEFT JOIN favorite ON restaurant.id = favorite.restaurantId 
-            ${filterQuery == "" ? "WHERE": filterQuery + "AND "} restaurant.state='${getRestaurantDto.state}' GROUP BY restaurant.id;`;
+            ${filterQuery == "WHERE " ? "WHERE": filterQuery + "AND "} restaurant.state='${getRestaurantDto.state}' AND restaurant.status = 'approve' GROUP BY restaurant.id;`;
         } else {
             sql = `SELECT restaurant.restaurantName, restaurant.id, restaurant.uniqueId,restaurant.state, 
             restaurant.geo, restaurant.view,restaurant.image,COUNT(distinct comment.id) AS comments, 
             COUNT(DISTINCT favorite.userId) as follower FROM restaurant LEFT JOIN comment ON 
             restaurant.id = comment.restaurant_id LEFT JOIN favorite ON restaurant.id = favorite.restaurantId 
-            ${filterQuery}GROUP BY restaurant.id;`;
+            ${filterQuery} restaurant.status='approve' GROUP BY restaurant.id;`;
         }
+
+        console.log(sql);
        
         let restaurants = (await this.restaurantRepository.query(sql));
         let comments = await this.commentService.getAll();
@@ -160,6 +191,23 @@ export class RestaurantsService {
         return restaurant;
     }
 
+    async getCommentByType(restaurant: Restaurant, type: number) {
+        let totalPhotos = [];
+        let comments: any = await this.commentService.getByRestaurantIdWithType(restaurant.id, type);
+        comments =  await Promise.all(comments.map(async (comment) => {
+            const photos = await this.commentService.getImageById(comment.id);
+            const totalLikeUser =  await (await this.commentService.getAllCommentLikeById(comment)).map(item => item.user);
+            totalPhotos.push(...photos);
+            return {
+                ...comment,
+                photos,
+                totalLikeUser,
+            }
+        }));
+        return comments;
+
+    }
+
     async getSingleRestaurantInfo(uniqueId: string) {
         const sql = `
         SELECT restaurant.restaurantName, restaurant.id, restaurant.uniqueId,restaurant.state, restaurant.view, restaurant.geo, 
@@ -182,10 +230,12 @@ export class RestaurantsService {
         const user = await this.userService.finduserById(restaurant.createById);
         comments =  await Promise.all(comments.map(async (comment) => {
              const photos = await this.commentService.getImageById(comment.id);
+             const totalLikeUser =  await (await this.commentService.getAllCommentLikeById(comment)).map(item => item.user);
              totalPhotos.push(...photos);
              return {
                  ...comment,
                  photos,
+                 totalLikeUser,
              }
          }));
          let [good,normal, bad] = [0,0,0];
@@ -224,7 +274,12 @@ export class RestaurantsService {
 
     async searchRestaurant(searchRestaurantDto: SearchRestaurantDto) {
         let restaurants = await this.restaurantRepository.find({
-            restaurantName: Like(`%${searchRestaurantDto.keyword}%`),
+            where: {
+                restaurantName: Like(`%${searchRestaurantDto.keyword}%`),
+                status: RestaurantStatus.APPROVE,
+            }
+            
+            
         });
 
         const newRestaurants = await Promise.all(restaurants.map(async (restaurant) => {
@@ -248,32 +303,5 @@ export class RestaurantsService {
 
         return newRestaurants;
     }
-
-    // async searchRestaurantWithToken(searchRestaurantDto: SearchRestaurantDto, user: User) {
-    //     let restaurants = await this.restaurantRepository.find({
-    //         restaurantName: Like(`%${searchRestaurantDto.keyword}%`),
-    //     });
-
-    //     const newRestaurants = await Promise.all(restaurants.map(async (restaurant) => {
-    //         const comments = await this.commentService.getByrestaurantId(restaurant.id);
-    //         let [good,normal, bad] = [0,0,0];
-    //         comments.forEach((item) => {
-    //             if(item.type === CommentRating.GOOD) {
-    //                 good++;
-    //             } else if (item.type === CommentRating.NORMAL) {
-    //                 normal++;
-    //             }else {
-    //                 bad++;
-    //             }
-    //         })
-    //         const rating = this.calculateRating(Number(comments.length), bad, normal, good);
-    //         return {
-    //            ...restaurant,
-    //            rating,
-    //         }
-    //     }));
-
-    //     return newRestaurants;
-    // }
     
 }

@@ -1,4 +1,5 @@
 
+import { User } from "src/users/users.entity";
 import { BaseEntity, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Comment } from "./comment.entity";
 
@@ -12,7 +13,10 @@ export class CommentLike extends BaseEntity {
     uniqueId: string;
 
     @ManyToOne(()=> Comment, comment => comment.id)
-    comment: number;
+    comment: Comment;
+    @ManyToOne(() => User, user => user.id)
+    @JoinColumn({name: 'user_id'})
+    user: User
       
     @CreateDateColumn()
     createDate: string

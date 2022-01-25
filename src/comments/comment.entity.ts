@@ -25,7 +25,7 @@ export class Comment extends BaseEntity {
     images: CommentImage[]
 
     @OneToMany(() => CommentLike, like => like.id)
-    likes: CommentImage[]
+    likes: CommentLike[]
 
     @ManyToOne(() => Restaurant, (restaurant: Restaurant) => restaurant.id)
     @JoinColumn({ name: 'restaurant_id' })

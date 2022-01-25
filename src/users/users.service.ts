@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './users.entity';
+import { User, UserType } from './users.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateUserDto, CreateUseType } from './dto/create-user.dto';
 import { hashSync } from 'bcryptjs';
@@ -130,6 +130,44 @@ export class UsersService {
                 id,
             }
         });
+    }
+
+    async getAllUser() {
+        return this.userRepository.find({
+            where: {
+                userType: UserType.USER
+            }
+        });
+    }
+
+    async getSingleUser(id: string) {
+        const user = await this.userRepository.findOne({
+            uniqueId: id,
+        });
+        return user;
+    }
+
+    async upateUserIsActive(id: string, isActive: number) {
+      try {
+        const user = await this.userRepository.findOne({
+            uniqueId: id,
+        });
+
+        user.isActive = isActive === 0 ? false: true;
+        await this.userRepository.update(user.id, user);
+        return 'update successful';
+      } catch(e) {
+          return 'update failed';
+      }
+    }
+
+    async editPassword(pass, id) {
+        const user = await this.userRepository.findOne({
+            uniqueId: id,
+        });
+        console.log(typeof pass);
+        user.password = hashSync(pass);
+        return this.userRepository.update(user.id, user);
     }
 
 }

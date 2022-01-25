@@ -9,6 +9,8 @@ import { User } from 'src/users/users.entity';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateListDto } from './dto/create-list.dto';
+import { DeleteListItemDto } from './dto/delete-list-item.dto';
+import { DeleteListDto } from './dto/delete-list.dto';
 import { SearchListItemRestaurantDto } from './dto/search-list-item-restaurant.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 import { List } from './list.entity';
@@ -43,7 +45,7 @@ export class ListService {
             },
             where: {
                 user,
-            }
+            },
         })
     }
 
@@ -58,12 +60,26 @@ export class ListService {
         return this.listRepository.update(collectionList.id, collectionList);
     }
 
+    async deleteListByUniqueId(deleteListDto: DeleteListDto) {}
+
     async getListById(id: number) {
         return this.listRepository.findOne({
             where: {
                 id,
             }
         });
+    }
+
+    async delListByUniqueId(uniqueId: string) {
+        return this.listRepository.delete({
+            uniqueId,
+        });
+    }
+
+    async delListItemByListUniqueId(list: List) {
+        return this.listItemRepository.delete({
+            list,
+        })
     }
 
     async getCollectionListByUniqueId(uniqueId: string) {
@@ -84,7 +100,7 @@ export class ListService {
         return this.listItemRepository.save(listItemModel);
     }
 
-    async getListItemByCollectionListUniqueId(list: List) {
+    async getListItemByCollectionList(list: List) {
         const itemList = await this.listItemRepository.find({
             where: {
                 list,
@@ -118,7 +134,6 @@ export class ListService {
                 }
             }
         }));
-        console.log(items.length);
         items.sort((current, next) => {
             return current.order - next.order
         });
@@ -194,6 +209,18 @@ export class ListService {
         })
 
         return newRestaurants;
+    }
+
+    async updateOrder(itemUniqueId: string, order: number) {
+        const item = await this.listItemRepository.findOne({
+            where: {
+                uniqueId: itemUniqueId,
+            }
+        });
+        item.order = order;
+
+        this.listItemRepository.update(item.id, item);
+        
     }
 
     
