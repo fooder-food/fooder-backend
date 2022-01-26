@@ -68,12 +68,7 @@ export class RestaurantsService {
 
         const restaurant =  await this.restaurantRepository.save(restaurantModel);
         console.log(registerId);
-        return await this.firebaseService.pushMessaging({
-            title: 'title',
-            bodyData: 'body',
-            text: 'text',
-            registerID: registerId,
-        });
+        //return await this.firebaseService.pushMessaging();
         return restaurant;
     }
 
@@ -270,6 +265,37 @@ export class RestaurantsService {
         delete restaurant.createById;
         //let totalPhotos = await this.commentService.getAllCommentImage();
         return restaurant;
+    }
+
+    async getRestaurantAllImages(uniqueId: string) {
+        const photos = [];
+        const restaurant = await this.restaurantRepository.findOne({
+            uniqueId,
+        });
+        photos.push({
+            imageUrl: restaurant.image,
+            updateDate: restaurant.updateDate,
+            createDate: restaurant.createDate,
+            type: 'restaurant',
+            uniqueId: uniqueId,
+        });
+
+        let comments: any = await this.commentService.getByrestaurantId(restaurant.id);
+
+        for(let index = 0; index < comments.length ; index++) {
+            const commentPhotos = (await this.commentService.getImageById(comments[index].id)).map(item => {
+                return {
+                    imageUrl: item.imageUrl,
+                    updateDate: item.updateDate,
+                    createDate: item.createDate,
+                    type: 'comment',
+                    uniqueId: item.uniqueId,
+                }
+            });
+            photos.push(...commentPhotos);
+        }
+
+        return photos;
     }
 
     async searchRestaurant(searchRestaurantDto: SearchRestaurantDto) {

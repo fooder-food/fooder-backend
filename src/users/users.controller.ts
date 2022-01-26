@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Post, Put, UploadedFile, UseGuards, UseIn
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from 'src/auth/current-user.decorator';
+import { FirebaseService } from 'src/firebase/firebase.service';
+import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateUserWithAvatarDto } from './dto/update-user-with-avatar.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -11,7 +13,8 @@ import { UsersService } from './users.service';
 @Controller('users')
 export class UsersController {
     constructor(
-        private readonly usersService: UsersService
+        private readonly usersService: UsersService,
+        private readonly firebaseService: FirebaseService,
     ) {}
 
     @Get('profile')
@@ -92,6 +95,40 @@ export class UsersController {
     async editpassword(@Body() body) {
         console.log(body);
         return await this.usersService.editPassword(body.password, body.id);
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Get('/notifications')
+    async getNotifications(@CurrentUser() data) {
+        const notification = await this.firebaseService.getNotificationByUser(data.user);
+        return notification.map((item) => {
+            return {
+                ...item,
+                diffTime: this.firebaseService.calcDiffTime(item.createDate),
+            }
+        });
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Put('/notifications')
+    async updateNotifications(@CurrentUser() data, @Body() updateNotificationDto: UpdateNotificationDto) {
+
+        await this.firebaseService.updateNotificationIsRead(updateNotificationDto.uniqueId);
+
+        const notification = await this.firebaseService.getNotificationByUser(data.user);
+        return notification.map((item) => {
+            return {
+                ...item,
+                diffTime: this.firebaseService.calcDiffTime(item.createDate),
+            }
+        });
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Get('/notifications/count')
+    async getNotificationCount(@CurrentUser() data,) {
+        return await this.firebaseService.getNotificationCount(data.user);
+       
     }
 
 }

@@ -36,6 +36,7 @@ export class RestaurantsController {
         private readonly favoriteService: FavoriteService,
         private readonly userService: UsersService,
         private readonly commentService: CommentsService,
+    
     ) {}
     
     @UseGuards(AuthGuard('jwt'))
@@ -124,6 +125,11 @@ export class RestaurantsController {
     @Get('/:id')
     async getSingleRestaurant(@Param('id') id) {
         return await this.restaurantsService.getSingleRestaurantInfo(id);
+    }
+
+    @Get('/photos/:id')
+    async getRetaurantsImages(@Param('id') id) {
+        return this.restaurantsService.getRestaurantAllImages(id);
     }
 
     @UseGuards(AuthGuard('jwt'))
@@ -269,9 +275,11 @@ export class RestaurantsController {
     @Put('/update')
     async updateRestaurantInfo(@Body() updateRestaurantInfoDto: UpdateRestaurantInfoDto, @CurrentUser() data) {
         try {
-            const results = await this.restaurantsService.getPlaceId(updateRestaurantInfoDto.address);
+        const results = await this.restaurantsService.getPlaceId(updateRestaurantInfoDto.address);
         const placeId = results[0].place_id;
         const restaurant = await this.restaurantsService.getRestaurantInfo(updateRestaurantInfoDto.uniqueId);
+        const oldStatus = restaurant.status;
+        const user = restaurant.createBy;
         if(restaurant.placeId !== placeId) {
             const addressComponent = results[0].address_components as [];
             restaurant.placeId = placeId;
@@ -292,7 +300,28 @@ export class RestaurantsController {
         restaurant.breakTime = updateRestaurantInfoDto.breakTime;
         restaurant.restaurantPhone = updateRestaurantInfoDto.restaurantPhone;
         restaurant.status = updateRestaurantInfoDto.status;
-         await this.restaurantsService.updateRestaurantInfo(restaurant);
+        await this.restaurantsService.updateRestaurantInfo(restaurant);
+        if(updateRestaurantInfoDto.status.toUpperCase() === 'APPROVE' 
+        && oldStatus.toUpperCase() !== 'APPROVE') {
+            this.firebaseService.create(
+                    `${restaurant.restaurantName} is approved by admin`,
+                    restaurant.image,
+                    'restaurant',
+                    restaurant.uniqueId,
+                    user,
+            );
+            this.firebaseService.pushMessaging({
+                title: `${restaurant.restaurantName} is approved`,
+                bodyData: {
+                    param: 'restaurant',
+                    uniqueId: restaurant.uniqueId,
+                    url:restaurant.uniqueId,
+                },
+                description: 'Your add restaurant is approved',
+                userId: user.uniqueId,
+            });
+        }
+        
          return {
              message: 'Update Successful',
          }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtStrategy } from 'src/auth/jwt.strategy';
+import { FirebaseModule } from 'src/firebase/firebase.module';
 import { UsersController } from './users.controller';
 import { User } from './users.entity';
 import { UsersService } from './users.service';
@@ -10,6 +11,7 @@ const MAO = require('multer-ali-oss');
 
 @Module({
   imports: [
+    FirebaseModule,
     TypeOrmModule.forFeature([User]),
     MulterModule.registerAsync({
       useFactory() {

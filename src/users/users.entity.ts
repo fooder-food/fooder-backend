@@ -2,6 +2,7 @@ import { Category } from 'src/category/category.entity';
 import { Comment } from 'src/comments/comment.entity';
 import { CommentLike } from 'src/comments/commentLike.entity';
 import { CommentReply } from 'src/comments/commentReply.entity';
+import { UserNotification } from 'src/firebase/notification.entity';
 import { SearchHistory } from 'src/history/history.entity';
 import { List } from 'src/list/list.entity';
 import { Restaurant } from 'src/restaurants/restaurant.entity';
@@ -75,6 +76,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Comment, comment => comment.id)
   comments: Comment[]
+
+  @OneToMany(() => UserNotification, notification => notification.id)
+  notifications: UserNotification[]
 
   @OneToMany(() => List, list => list.id)
   list: List[]
