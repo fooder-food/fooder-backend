@@ -15,6 +15,7 @@ import { FavoriteModule } from './favorite/favorite.module';
 import { CommentsModule } from './comments/comments.module';
 import { HistoryModule } from './history/history.module';
 import { ListModule } from './list/list.module';
+import { ReportModule } from './report/report.module';
 @Module({
   imports: [
     SharedModule,
@@ -31,6 +32,7 @@ import { ListModule } from './list/list.module';
     CommentsModule,
     HistoryModule,
     ListModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService, HttpModule],

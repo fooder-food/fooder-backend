@@ -42,10 +42,11 @@ export class ListController {
         await this.listService.createList(createListDto, data.user);
         const collectionList = await this.listService.getAllListByUser(data.user);
         const newCollectionList = Promise.all(collectionList.map(async (list) => {
+            const items = await this.listService.getListItemByCollectionList(list);
             let image = "";
             return {
                 ...list,
-                image,
+                image: items.image,
             }
         }));
        return newCollectionList;

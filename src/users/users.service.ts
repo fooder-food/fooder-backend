@@ -29,6 +29,15 @@ export class UsersService {
         return user;
     }
 
+    async getUserWithCount() {
+        return this.userRepository.findAndCount({
+            where: {
+                isActive: true,
+                userType: UserType.USER,
+            }
+        })
+    }
+
     async findOneByEmail(email: string, withPass: boolean = false) {
         const selectColumn: (keyof User)[] = ['email','username', 'uniqueId', 'userType', 'id', 'createDate', 'updateDate', 'avatar', 'avatarType', 'deviceToken'];
         if(withPass) selectColumn.push('password');

@@ -43,6 +43,7 @@ export class RestaurantsController {
     @UseInterceptors(FileInterceptor('image'))
     @Post('/create')
     async createRestaurant(@UploadedFile('file') file,@CurrentUser() data, @Body() createRestaurantDto: CreateRestaurantDto) {
+        console.log(createRestaurantDto);
         const image = file.url;
         const information = await this.restaurantsService.getInformationByPlaceId(createRestaurantDto.placeId);
         const category = await this.categoryService.getCategoryByUniqueId(createRestaurantDto.selectedCategoryUniqueId);
@@ -310,7 +311,7 @@ export class RestaurantsController {
                     restaurant.uniqueId,
                     user,
             );
-            this.firebaseService.pushMessaging({
+           const result = await this.firebaseService.pushMessaging({
                 title: `${restaurant.restaurantName} is approved`,
                 bodyData: {
                     param: 'restaurant',
@@ -320,6 +321,7 @@ export class RestaurantsController {
                 description: 'Your add restaurant is approved',
                 userId: user.uniqueId,
             });
+            console.log(result);
         }
         
          return {

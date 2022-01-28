@@ -33,6 +33,14 @@ export class RestaurantsService {
         return this.restaurantRepository.find();
     }
 
+    async getAllRestaurantWithCount() {
+        return this.restaurantRepository.findAndCount({
+            where: {
+                status: RestaurantStatus.APPROVE,
+            }
+        });
+    }
+
     async getRestaurantInfo(id) {
         return this.restaurantRepository.findOne({
             where: {
@@ -115,7 +123,7 @@ export class RestaurantsService {
             restaurant.geo, restaurant.view,restaurant.image,COUNT(distinct comment.id) AS comments, 
             COUNT(DISTINCT favorite.userId) as follower FROM restaurant LEFT JOIN comment ON 
             restaurant.id = comment.restaurant_id LEFT JOIN favorite ON restaurant.id = favorite.restaurantId 
-            ${filterQuery} restaurant.status='approve' GROUP BY restaurant.id;`;
+            ${filterQuery =="WHERE " ? "WHERE": filterQuery + "AND "} restaurant.status='approve' GROUP BY restaurant.id;`;
         }
 
         console.log(sql);

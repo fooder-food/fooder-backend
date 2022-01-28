@@ -28,13 +28,13 @@ export class FirebaseService {
     async pushMessaging(info: messageInterface) {
         const header = {
             "Content-Type": "application/json",
-            "Authorization": "Basic MTdlMjNhYjQtN2RmMS00ZDNkLThjNDUtYmU1YWRmNWIyZGY5",
+            "Authorization": `Basic ${process.env.ONE_SIGNAL_KEY}`,
         };
 
         const url = 'https://onesignal.com/api/v1/notifications';
 
         const body = {
-            app_id: "646548d6-1afc-4403-b2c2-b102eae04e91",
+            app_id: `${process.env.ONE_SIGNAL_APP_ID}`,
             headings: {
                 "en": info.title,
             },

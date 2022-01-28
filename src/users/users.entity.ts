@@ -5,6 +5,7 @@ import { CommentReply } from 'src/comments/commentReply.entity';
 import { UserNotification } from 'src/firebase/notification.entity';
 import { SearchHistory } from 'src/history/history.entity';
 import { List } from 'src/list/list.entity';
+import { Report } from 'src/report/report.entity';
 import { Restaurant } from 'src/restaurants/restaurant.entity';
 import { BaseEntity, BeforeInsert, BeforeUpdate, Column, CreateDateColumn, Entity, JoinTable, ManyToMany, OneToMany, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { CreateUseType } from './dto/create-user.dto';
@@ -79,6 +80,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => UserNotification, notification => notification.id)
   notifications: UserNotification[]
+
+  @OneToMany(() => Report, report => report.id)
+  reports: Report[]
 
   @OneToMany(() => List, list => list.id)
   list: List[]
